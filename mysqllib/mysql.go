@@ -3,6 +3,7 @@ package mysqllib
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 func TestDatabaseConnection(db *sql.DB) {
@@ -27,7 +28,7 @@ func CreateDatabase(db *sql.DB, dbName string) {
 	}
 	logTableCreate := `CREATE TABLE IF NOT EXISTS log (
 		id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
-		log VARCHAR(512) NOT NULL,
+		log TEXT NOT NULL,
 		created DATETIME DEFAULT NOW()
 	)
 `
@@ -38,15 +39,27 @@ func CreateDatabase(db *sql.DB, dbName string) {
 	defer tableCreate.Close()
 }
 
-func InsertLog(db *sql.DB, dbName string, log string) {
+func InsertLog(db *sql.DB, dbName string, log_lines []string) {
 	_, err := db.Query(fmt.Sprintf("USE %s", dbName))
 	if err != nil {
 		panic(err.Error())
 	}
-	insert, err := db.Prepare("INSERT INTO log (log) VALUES ( ? )")
+	sql := "INSERT INTO log (log) VALUES "
+
+	var values []interface{}
+	for _, line := range log_lines {
+		sql += "( ? ),"
+		values = append(values, strings.TrimSpace(string(line)))
+	}
+	sql = sql[0 : len(sql)-1]
+	insert, err := db.Prepare(sql)
 	if err != nil {
 		panic(err.Error())
 	}
-	insert.Exec(log)
+
+	_, err = insert.Exec(values...)
+	if err != nil {
+		panic(err.Error())
+	}
 	defer insert.Close()
 }

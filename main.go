@@ -46,7 +46,9 @@ func main() {
 
 	if createDB {
 		db, err := sql.Open("mysql", mysqlConfig.FormatDSN())
-		fmt.Println(mysqlConfig.FormatDSN())
+		if debug {
+			fmt.Println(mysqlConfig.FormatDSN())
+		}
 		if err != nil {
 			panic(err)
 		}
@@ -69,10 +71,10 @@ func main() {
 	// Check if there is something to read on stdin
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
-		var stdin []byte
+		stdin := []string{}
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
-			stdin = append(stdin, scanner.Bytes()...)
+			stdin = append(stdin, scanner.Text())
 		}
 		if err := scanner.Err(); err != nil {
 			panic(err)
@@ -80,13 +82,13 @@ func main() {
 		if debug {
 			fmt.Printf("stdin = %s\n", stdin)
 		}
-		mysqllib.InsertLog(db, mysqlDB, string(stdin))
+		mysqllib.InsertLog(db, mysqlDB, stdin)
 	} else {
 		if log != "" {
 			if debug {
 				fmt.Printf("log = %s\n", log)
 			}
-			mysqllib.InsertLog(db, mysqlDB, log)
+			mysqllib.InsertLog(db, mysqlDB, []string{log})
 		} else {
 			panic("A string message to log should be provided on stdin or with the -log flag")
 		}
